@@ -1,0 +1,22 @@
+# Packaging target for the full stack. Note (CLAUDE.md / PLAN.md decision #4): during
+# Kubernetes development the backend runs on the host via `uv run`, because a
+# containerised backend cannot easily reach a local kind/minikube API server. No
+# cluster access is wired this phase.
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
