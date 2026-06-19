@@ -100,6 +100,26 @@ class NetworkEvidence(BaseModel):
     services_with_issues: list[ServiceNetwork] = Field(default_factory=list)
 
 
+# --- Diagnosis (Phase 3) ----------------------------------------------------
+
+
+class Diagnosis(BaseModel):
+    """The LLM's reasoning over the evidence.
+
+    ``confidence`` is the **model's self-report** (0–100), not a calibrated
+    probability — label it that way wherever it is shown (CLAUDE.md).
+    ``kubectl_command`` is a string for the user to READ; it is never executed.
+    """
+
+    root_cause: str
+    explanation: str
+    suggested_fix: str
+    kubectl_command: str = ""
+    prevention: str = ""
+    confidence: int = Field(ge=0, le=100)
+    confidence_reasoning: str = ""
+
+
 # --- Aggregate --------------------------------------------------------------
 
 
@@ -111,3 +131,6 @@ class InvestigationEvidence(BaseModel):
     network: NetworkEvidence = Field(default_factory=NetworkEvidence)
     healthy: bool = True
     summary: str = "No unhealthy resources found"
+    # Phase 3: populated after the ai_reasoning step (None when skipped or on failure).
+    diagnosis: Diagnosis | None = None
+    diagnosis_error: str | None = None

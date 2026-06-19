@@ -14,10 +14,13 @@ Still no AI this phase — this only gathers structured evidence.
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import AsyncIterator
 
 from loguru import logger
 
+from app.ai import reasoner
+from app.ai.client import LLMError
 from app.kubernetes import inspector
 from app.kubernetes.executor import KubectlError
 from app.models.schemas import InvestigationEvidence
@@ -101,6 +104,21 @@ async def stream_investigation(context=None, namespace=None) -> AsyncIterator[di
             pods=pods, logs=logs, events=events, deployments=deployments, network=network
         )
         evidence.healthy, evidence.summary = _summarise(evidence)
+
+        # 6. AI reasoning. Emit the step marker, then reason over the evidence.
+        yield {"event": "ai_reasoning", "data": json.dumps({"status": "reasoning"})}
+        if evidence.healthy:
+            # Confirmed decision: nothing to diagnose on a healthy cluster — skip the
+            # LLM call (saves tokens, avoids confidence theatre).
+            logger.info("cluster healthy; skipping AI reasoning")
+        else:
+            try:
+                evidence.diagnosis = await reasoner.diagnose(evidence)
+            except LLMError as exc:
+                # Network OR parse failure: degrade gracefully, never crash the stream.
+                logger.error("reasoning failed: {}", exc)
+                evidence.diagnosis_error = str(exc)
+
         logger.info("investigation done: {}", evidence.summary)
         yield {"event": "done", "data": evidence.model_dump_json()}
 

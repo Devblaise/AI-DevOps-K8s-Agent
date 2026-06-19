@@ -21,9 +21,14 @@ class Settings(BaseSettings):
     # CORS: the frontend origin allowed to call this API.
     frontend_origin: str = "http://localhost:3000"
 
-    # OpenRouter (placeholders — unused until Phase 3).
+    # OpenRouter — the LLM path (called directly; InsForge is not in this path).
     openrouter_api_key: str = ""
     openrouter_model: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+
+    # LLM request tuning. Low temperature for deterministic-leaning diagnoses.
+    llm_timeout_seconds: float = 60.0
+    llm_temperature: float = 0.1
 
 
 settings = Settings()
