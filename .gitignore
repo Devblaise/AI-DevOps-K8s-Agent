@@ -20,3 +20,7 @@ npm-debug.log*
 *.swp
 .idea/
 .vscode/
+
+# Local agent / MCP config (.mcp.json carries the InsForge API key inline)
+.mcp.json
+.claude/settings.local.json
