@@ -1,0 +1,42 @@
+# Scenario 4 — Service selector mismatch.
+#
+# The pods are healthy and running with label `app: web`. The Service selects
+# `app: wbe` (a typo), so it matches zero pods and has no endpoints. Traffic to
+# the Service goes nowhere even though the workload is fine.
+#
+# Expected diagnosis: the Service selector (app=wbe) doesn't match the pod labels
+# (app=web), so the Service has no endpoints; fix the selector to app=web.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+  namespace: k8s-agent-lab
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web        # <-- pods are labelled app=web
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-svc
+  namespace: k8s-agent-lab
+spec:
+  selector:
+    app: wbe            # <-- typo: should be app=web; matches no pods
+  ports:
+    - port: 80
+      targetPort: 80

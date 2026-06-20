@@ -1,0 +1,37 @@
+# Scenario 1 — CrashLoopBackOff caused by a missing required env var.
+#
+# The container's entrypoint requires APP_DB_URL. It is never set, so the script
+# exits 1 immediately on every start. Kubernetes restarts it with exponential
+# backoff -> the pod settles into CrashLoopBackOff.
+#
+# Expected diagnosis: container is crash-looping because a required configuration
+# value (APP_DB_URL) is missing; logs show the explicit "must be set" error.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crashloop-app
+  namespace: k8s-agent-lab
+  labels:
+    app: crashloop-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crashloop-app
+  template:
+    metadata:
+      labels:
+        app: crashloop-app
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          # Fail fast and loudly if the required env var is absent.
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ -z "$APP_DB_URL" ]; then
+                echo "FATAL: APP_DB_URL must be set; refusing to start" >&2
+                exit 1
+              fi
+              echo "started" && sleep 3600

@@ -28,9 +28,10 @@ export function ClusterPicker({
   useEffect(() => {
     let active = true;
     fetchClusters()
-      .then((list) => {
+      .then(({ contexts: list, error }) => {
         if (!active) return;
         setContexts(list);
+        if (error) setLoadError(error);
         if (list.length && !context) onContextChange(list[0]);
       })
       .catch((err) => active && setLoadError((err as Error).message))
@@ -95,8 +96,8 @@ export function ClusterPicker({
       </button>
 
       {loadError && (
-        <p className="w-full text-sm text-red-600 dark:text-red-400">
-          Could not load clusters: {loadError}
+        <p className="w-full whitespace-pre-line text-sm text-red-600 dark:text-red-400">
+          {loadError}
         </p>
       )}
     </div>

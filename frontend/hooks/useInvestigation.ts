@@ -32,6 +32,11 @@ export function useInvestigation(): UseInvestigation {
 
   const sourceRef = useRef<EventSource | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tracks whether the stream already reached a terminal state, so a late native
+  // EventSource "error" (which fires with no data after the server closes) doesn't
+  // overwrite a successful "done". A ref avoids the stale-closure problem a state
+  // value would have inside the listener.
+  const settledRef = useRef(false);
 
   const cleanup = useCallback(() => {
     sourceRef.current?.close();
@@ -44,6 +49,7 @@ export function useInvestigation(): UseInvestigation {
 
   const reset = useCallback(() => {
     cleanup();
+    settledRef.current = false;
     setPhase("idle");
     setCompletedSteps(new Set());
     setEvidence(null);
@@ -52,6 +58,8 @@ export function useInvestigation(): UseInvestigation {
 
   const fail = useCallback(
     (message: string) => {
+      if (settledRef.current) return;
+      settledRef.current = true;
       cleanup();
       setError(message);
       setPhase("error");
@@ -62,6 +70,7 @@ export function useInvestigation(): UseInvestigation {
   const start = useCallback(
     (context: string, namespace?: string) => {
       cleanup();
+      settledRef.current = false;
       setCompletedSteps(new Set());
       setEvidence(null);
       setError(null);
@@ -88,36 +97,37 @@ export function useInvestigation(): UseInvestigation {
       }
 
       source.addEventListener("done", (ev) => {
+        if (settledRef.current) return;
         try {
           const data = JSON.parse((ev as MessageEvent).data) as InvestigationEvidence;
+          settledRef.current = true;
           setEvidence(data);
           setPhase("done");
+          cleanup();
         } catch {
-          setError("Could not parse the investigation result.");
-          setPhase("error");
+          fail("Could not parse the investigation result.");
         }
-        cleanup();
       });
 
       source.addEventListener("error", (ev) => {
-        // Backend-emitted error event carries an evidence payload with a message.
+        // Backend-emitted error event carries a friendly { message } payload.
         const raw = (ev as MessageEvent).data;
         if (raw) {
           try {
-            const data = JSON.parse(raw) as InvestigationEvidence;
-            fail(data.summary || "The investigation failed.");
+            const data = JSON.parse(raw) as { message?: string };
+            fail(data.message || "The investigation failed.");
             return;
           } catch {
             /* fall through to generic handling */
           }
         }
-        // Native EventSource error (connection dropped / backend down).
-        if (phase !== "done") {
-          fail("Lost connection to the investigation stream.");
-        }
+        // Native EventSource error with no data (connection dropped / backend down).
+        // Ignored if we've already settled, since EventSource also fires this when the
+        // server closes the stream normally after "done".
+        fail("Lost connection to the backend. Check that it's running, then try again.");
       });
     },
-    [cleanup, fail, phase],
+    [cleanup, fail],
   );
 
   return { phase, completedSteps, evidence, error, start, reset };

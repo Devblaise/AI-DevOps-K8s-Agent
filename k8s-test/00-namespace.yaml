@@ -1,0 +1,16 @@
+# Dedicated namespace for the failure-scenario fixtures.
+#
+# Everything that intentionally breaks lives here so it is easy to scope an
+# investigation to it (`namespace=k8s-agent-lab`) and easy to clean up afterwards
+# (`kubectl delete namespace k8s-agent-lab`).
+#
+# NOTE: These manifests are the ONLY place in this repo allowed to create broken
+# resources, and they are applied MANUALLY by a human. The agent never applies,
+# edits, or deletes anything — its investigation layer is strictly read-only.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-agent-lab
+  labels:
+    app.kubernetes.io/part-of: ai-k8s-agent
+    purpose: failure-testing
