@@ -15,7 +15,12 @@ services:
     build:
       context: ./frontend
       args:
+        # NEXT_PUBLIC_* are inlined at build time. Compose reads these from the
+        # repo-root .env (see .env.example). Without the InsForge URL, in-browser
+        # auth fails with "network request failed".
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_INSFORGE_URL: ${NEXT_PUBLIC_INSFORGE_URL:-}
+        NEXT_PUBLIC_INSFORGE_ANON_KEY: ${NEXT_PUBLIC_INSFORGE_ANON_KEY:-}
     ports:
       - "3000:3000"
     depends_on:

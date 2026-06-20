@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { insforgeConfigured } from "@/lib/insforge";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,6 +25,12 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!insforgeConfigured) {
+      setError(
+        "InsForge URL is not configured (NEXT_PUBLIC_INSFORGE_URL). Set it and rebuild.",
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       if (mode === "signin") {
@@ -60,6 +67,13 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
+
+        {!insforgeConfigured && (
+          <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+            InsForge is not configured. Set <code>NEXT_PUBLIC_INSFORGE_URL</code> and
+            rebuild (for Docker) or restart the dev server.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {mode === "signup" && (
