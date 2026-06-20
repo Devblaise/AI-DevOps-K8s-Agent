@@ -1,7 +1,7 @@
 // Investigation history, persisted in the InsForge `investigations` table.
 
 import { insforge } from "@/lib/insforge";
-import { InvestigationEvidence } from "@/types/investigation";
+import { Diagnosis, InvestigationEvidence } from "@/types/investigation";
 
 export interface InvestigationRecord {
   id: string;
@@ -14,6 +14,8 @@ export interface InvestigationRecord {
   status: string;
   summary: string | null;
   healthy: boolean;
+  // Full diagnosis payload (null for older records saved before this column existed).
+  diagnosis: Diagnosis | null;
 }
 
 const TABLE = "investigations";
@@ -41,6 +43,7 @@ export async function saveInvestigation(
       status: statusFor(evidence),
       summary: evidence.summary,
       healthy: evidence.healthy,
+      diagnosis: evidence.diagnosis,
     },
   ]);
   if (error) {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
 import { ClusterPicker } from "@/components/ClusterPicker";
+import { DiagnosisModal } from "@/components/DiagnosisModal";
 import { HistoryList } from "@/components/HistoryList";
 import { InvestigationChecklist } from "@/components/InvestigationChecklist";
 import { RootCauseCard } from "@/components/RootCauseCard";
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [records, setRecords] = useState<InvestigationRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<InvestigationRecord | null>(null);
 
   const refreshHistory = useCallback(async () => {
     if (!user) return;
@@ -116,9 +118,18 @@ export default function DashboardPage() {
         )}
 
         <div className="mt-10">
-          <HistoryList records={records} loading={historyLoading} error={historyError} />
+          <HistoryList
+            records={records}
+            loading={historyLoading}
+            error={historyError}
+            onSelect={setSelected}
+          />
         </div>
       </main>
+
+      {selected && (
+        <DiagnosisModal record={selected} onClose={() => setSelected(null)} />
+      )}
     </div>
   );
 }

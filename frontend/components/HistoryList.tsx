@@ -6,6 +6,7 @@ interface Props {
   records: InvestigationRecord[];
   loading: boolean;
   error: string | null;
+  onSelect: (record: InvestigationRecord) => void;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -23,12 +24,19 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function HistoryList({ records, loading, error }: Props) {
+export function HistoryList({ records, loading, error, onSelect }: Props) {
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-      <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-gray-200">
-        Recent investigations
-      </h2>
+      <div className="mb-3 flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+          Recent investigations
+        </h2>
+        {!!records.length && (
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            Click a row for the full diagnosis
+          </span>
+        )}
+      </div>
 
       {loading && <p className="text-sm text-gray-500 dark:text-gray-400">Loading history…</p>}
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -50,7 +58,11 @@ export function HistoryList({ records, loading, error }: Props) {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {records.map((r) => (
-                <tr key={r.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <tr
+                  key={r.id}
+                  onClick={() => onSelect(r)}
+                  className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                >
                   <td className="whitespace-nowrap py-2.5 pr-4 text-gray-500 dark:text-gray-400">
                     {new Date(r.created_at).toLocaleString()}
                   </td>
