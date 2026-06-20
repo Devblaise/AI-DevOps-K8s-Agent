@@ -1,0 +1,41 @@
+# Scenario 3 — OOMKilled caused by a memory limit set far too low.
+#
+# The container deliberately allocates ~100MB, but its memory limit is 16Mi. The
+# kernel OOM-killer terminates it (exit reason OOMKilled), and it restarts into a
+# crash loop. `kubectl get pod -o json` shows
+# lastState.terminated.reason == "OOMKilled".
+#
+# Expected diagnosis: the container is being OOMKilled because its memory limit
+# (16Mi) is far below what it needs; raise the limit (or reduce usage).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oomkilled-app
+  namespace: k8s-agent-lab
+  labels:
+    app: oomkilled-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oomkilled-app
+  template:
+    metadata:
+      labels:
+        app: oomkilled-app
+    spec:
+      containers:
+        - name: app
+          image: python:3.12-slim
+          # Allocate ~100MB into a bytearray; the 16Mi limit forces an OOM kill.
+          command: ["python", "-c"]
+          args:
+            - |
+              x = bytearray(100 * 1024 * 1024)
+              print("allocated", len(x))
+              import time; time.sleep(3600)
+          resources:
+            requests:
+              memory: "8Mi"
+            limits:
+              memory: "16Mi"

@@ -20,6 +20,32 @@ export interface InvestigationRecord {
 
 const TABLE = "investigations";
 
+/** Thrown when an InsForge call fails because the session is missing/expired. */
+export class SessionExpiredError extends Error {
+  constructor() {
+    super("Your session has expired. Please sign in again.");
+    this.name = "SessionExpiredError";
+  }
+}
+
+// InsForge errors carry a status and/or message; treat 401/403 (or auth-ish text) as
+// an expired session so the UI can send the user back to login instead of showing a
+// confusing data error.
+function raise(error: unknown, fallback: string): never {
+  const e = error as { status?: number; message?: string };
+  const msg = (e.message ?? "").toLowerCase();
+  if (
+    e.status === 401 ||
+    e.status === 403 ||
+    msg.includes("unauthorized") ||
+    msg.includes("jwt") ||
+    msg.includes("token")
+  ) {
+    throw new SessionExpiredError();
+  }
+  throw new Error(e.message ?? fallback);
+}
+
 function statusFor(evidence: InvestigationEvidence): string {
   if (evidence.diagnosis_error) return "error";
   if (evidence.healthy) return "healthy";
@@ -46,9 +72,7 @@ export async function saveInvestigation(
       diagnosis: evidence.diagnosis,
     },
   ]);
-  if (error) {
-    throw new Error((error as { message?: string }).message ?? "Failed to save history");
-  }
+  if (error) raise(error, "Failed to save history");
 }
 
 export async function listInvestigations(
@@ -61,8 +85,6 @@ export async function listInvestigations(
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .range(0, limit - 1);
-  if (error) {
-    throw new Error((error as { message?: string }).message ?? "Failed to load history");
-  }
+  if (error) raise(error, "Failed to load history");
   return (data as InvestigationRecord[]) ?? [];
 }

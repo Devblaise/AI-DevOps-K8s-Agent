@@ -14,6 +14,7 @@ import {
   InvestigationRecord,
   listInvestigations,
   saveInvestigation,
+  SessionExpiredError,
 } from "@/services/history";
 import { InvestigationEvidence } from "@/types/investigation";
 
@@ -29,17 +30,30 @@ export default function DashboardPage() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [selected, setSelected] = useState<InvestigationRecord | null>(null);
 
+  // A failed InsForge call that looks like an expired session ends the session
+  // cleanly (sign out -> login) instead of surfacing a confusing data error.
+  const handleHistoryError = useCallback(
+    (err: unknown) => {
+      if (err instanceof SessionExpiredError) {
+        void signOut();
+        return;
+      }
+      setHistoryError((err as Error).message);
+    },
+    [signOut],
+  );
+
   const refreshHistory = useCallback(async () => {
     if (!user) return;
     setHistoryError(null);
     try {
       setRecords(await listInvestigations(user.id));
     } catch (err) {
-      setHistoryError((err as Error).message);
+      handleHistoryError(err);
     } finally {
       setHistoryLoading(false);
     }
-  }, [user]);
+  }, [user, handleHistoryError]);
 
   useEffect(() => {
     void refreshHistory();
@@ -53,8 +67,8 @@ export default function DashboardPage() {
     savedRef.current = evidence;
     saveInvestigation(user.id, context, namespace || undefined, evidence)
       .then(refreshHistory)
-      .catch((err) => setHistoryError((err as Error).message));
-  }, [phase, evidence, user, context, namespace, refreshHistory]);
+      .catch(handleHistoryError);
+  }, [phase, evidence, user, context, namespace, refreshHistory, handleHistoryError]);
 
   const streaming = phase === "streaming";
 
@@ -105,13 +119,18 @@ export default function DashboardPage() {
         />
 
         {phase === "error" && (
-          <p className="mt-4 animate-fade-in-up rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+          <p className="mt-4 animate-fade-in-up whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
             {error}
           </p>
         )}
 
         {(streaming || phase === "done") && (
           <div className="mt-6 space-y-6">
+            {streaming && (
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Investigating cluster…
+              </p>
+            )}
             <InvestigationChecklist completedSteps={completedSteps} done={phase === "done"} />
             {phase === "done" && evidence && <RootCauseCard evidence={evidence} />}
           </div>

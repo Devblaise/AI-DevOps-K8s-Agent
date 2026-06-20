@@ -22,7 +22,7 @@ from loguru import logger
 from app.ai import reasoner
 from app.ai.client import LLMError
 from app.kubernetes import inspector
-from app.kubernetes.executor import KubectlError
+from app.kubernetes.executor import KubectlError, friendly_message
 from app.models.schemas import InvestigationEvidence
 
 
@@ -123,8 +123,13 @@ async def stream_investigation(context=None, namespace=None) -> AsyncIterator[di
         yield {"event": "done", "data": evidence.model_dump_json()}
 
     except KubectlError as exc:
-        # Minimal error surfacing this phase; friendly handling is Phase 5.
-        logger.error("investigation failed: {}", exc)
-        yield {"event": "error", "data": InvestigationEvidence().model_copy(
-            update={"healthy": False, "summary": f"investigation failed: {exc}"}
-        ).model_dump_json()}
+        # Cluster/kubectl failure. Log the raw detail; show the user friendly copy only.
+        logger.error("investigation failed (kubectl): {}", exc)
+        yield {"event": "error", "data": json.dumps({"message": friendly_message(exc)})}
+    except Exception as exc:  # noqa: BLE001 — last line of defence, never crash the stream
+        # Anything unexpected (parse error, programming bug): degrade to a generic
+        # message instead of letting the SSE generator die with a raw traceback.
+        logger.exception("investigation failed (unexpected): {}", exc)
+        yield {"event": "error", "data": json.dumps({
+            "message": "The investigation hit an unexpected error. Please try again."
+        })}

@@ -98,3 +98,66 @@ def list_contexts() -> list[str]:
     """Return the kube context names (used by the cluster picker in Phase 4)."""
     out = run_kubectl(["config", "get-contexts", "-o", "name"], output_json=False)
     return [line.strip() for line in out.splitlines() if line.strip()]
+
+
+# Phase 5: map a low-level kubectl failure to a friendly, user-facing message.
+# The raw stderr (which can be noisy and leak paths) is logged, never shown — the UI
+# only ever sees the strings below. Ordering matters: more specific matches first.
+_GENERIC_FRIENDLY = (
+    "Something went wrong talking to the cluster. "
+    "Check that kubectl works from your terminal, then try again."
+)
+
+
+def friendly_message(exc: KubectlError) -> str:
+    """Translate a :class:`KubectlError` into copy safe to show a user.
+
+    Classifies on the error text rather than exit codes because kubectl returns the
+    same code (1) for very different problems. We match on stderr substrings.
+    """
+    text = (f"{exc} {exc.stderr}").lower()
+
+    if "executable not found" in text:
+        return (
+            "kubectl isn't installed or isn't on the PATH. "
+            "Install kubectl and make sure it's reachable, then try again."
+        )
+    if "timed out" in text or "i/o timeout" in text:
+        return (
+            "The cluster didn't respond in time. "
+            "Check that it's running and reachable, then try again."
+        )
+    # Missing / empty kubeconfig.
+    if (
+        "no configuration has been provided" in text
+        or "kubeconfig" in text
+        or "no such file or directory" in text
+    ):
+        return (
+            "No usable kubeconfig was found. "
+            "Check your kubeconfig path and that it points at a valid cluster."
+        )
+    # Bad / unknown context.
+    if "context" in text and ("does not exist" in text or "no context" in text):
+        return "That cluster context wasn't found. Pick a different cluster and try again."
+    # Cluster unreachable — the canonical example from the phase prompt.
+    if (
+        "connection refused" in text
+        or "was refused" in text  # "The connection to the server ... was refused"
+        or "unable to connect to the server" in text
+        or "no such host" in text
+        or "could not resolve" in text
+        or "dial tcp" in text
+        or "tls handshake" in text
+    ):
+        return (
+            "Unable to reach the Kubernetes cluster.\n"
+            "Check: kubeconfig path, cluster is running, kubectl permissions."
+        )
+    # RBAC / authorization.
+    if "forbidden" in text or "unauthorized" in text or "you must be logged in" in text:
+        return (
+            "Access to the cluster was denied. "
+            "Check that your kubectl credentials have permission to read these resources."
+        )
+    return _GENERIC_FRIENDLY

@@ -1,0 +1,29 @@
+# Scenario 2 — ImagePullBackOff caused by a bad image tag.
+#
+# The image name is valid but the tag does not exist in the registry, so the
+# kubelet can never pull it. The pod stays Pending with Reason=ImagePullBackOff
+# (ErrImagePull on the first attempts), and a Warning "Failed" event is emitted.
+#
+# Expected diagnosis: the image tag cannot be pulled (it doesn't exist); the pod
+# can't start until the tag is corrected.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imagepull-app
+  namespace: k8s-agent-lab
+  labels:
+    app: imagepull-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: imagepull-app
+  template:
+    metadata:
+      labels:
+        app: imagepull-app
+    spec:
+      containers:
+        - name: app
+          # Valid repo, nonexistent tag -> ErrImagePull -> ImagePullBackOff.
+          image: nginx:this-tag-does-not-exist-9999
