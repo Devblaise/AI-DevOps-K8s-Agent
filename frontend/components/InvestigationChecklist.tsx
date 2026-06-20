@@ -22,7 +22,7 @@ export function InvestigationChecklist({ completedSteps, done }: Props) {
   const activeIndex = rows.findIndex((r) => !r.complete);
 
   return (
-    <ol className="space-y-2 rounded-lg border border-gray-200 bg-white p-4">
+    <ol className="space-y-1 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
       {rows.map((row, i) => {
         const state = row.complete
           ? "complete"
@@ -30,21 +30,25 @@ export function InvestigationChecklist({ completedSteps, done }: Props) {
             ? "active"
             : "pending";
         return (
-          <li key={row.key} className="flex items-center gap-3 text-sm">
+          <li key={row.key} className="flex items-center gap-3 rounded-lg px-1.5 py-1.5 text-sm">
             <span
               className={
                 state === "complete"
-                  ? "flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs text-white"
+                  ? "flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[11px] font-bold text-white"
                   : state === "active"
-                    ? "h-5 w-5 animate-pulse rounded-full border-2 border-gray-900"
-                    : "h-5 w-5 rounded-full border-2 border-gray-300"
+                    ? "h-5 w-5 animate-pulse rounded-full border-2 border-indigo-500"
+                    : "h-5 w-5 rounded-full border-2 border-gray-300 dark:border-gray-700"
               }
             >
               {state === "complete" ? "✓" : ""}
             </span>
             <span
               className={
-                state === "pending" ? "text-gray-400" : "font-medium text-gray-800"
+                state === "pending"
+                  ? "text-gray-400 dark:text-gray-600"
+                  : state === "active"
+                    ? "font-medium text-indigo-600 dark:text-indigo-400"
+                    : "font-medium text-gray-800 dark:text-gray-200"
               }
             >
               {row.label}

@@ -7,6 +7,7 @@ import { ClusterPicker } from "@/components/ClusterPicker";
 import { HistoryList } from "@/components/HistoryList";
 import { InvestigationChecklist } from "@/components/InvestigationChecklist";
 import { RootCauseCard } from "@/components/RootCauseCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useInvestigation } from "@/hooks/useInvestigation";
 import {
   InvestigationRecord,
@@ -56,49 +57,68 @@ export default function DashboardPage() {
   const streaming = phase === "streaming";
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-8">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">AI Kubernetes Agent</h1>
-          <p className="text-sm text-gray-500">On-demand cluster troubleshooting</p>
-        </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-gray-500">{user?.email}</span>
-          <button
-            type="button"
-            onClick={() => signOut()}
-            className="rounded-md border border-gray-300 px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-100"
-          >
-            Log out
-          </button>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-950/80">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3.5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2 3 7v10l9 5 9-5V7l-9-5z" />
+                <path d="m3 7 9 5 9-5M12 12v10" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold tracking-tight text-gray-900 dark:text-white">
+                AI Kubernetes Agent
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                On-demand cluster troubleshooting
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 text-sm">
+            <span className="hidden text-gray-500 dark:text-gray-400 sm:inline">
+              {user?.email}
+            </span>
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="rounded-md border border-gray-200 px-3 py-1.5 font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Log out
+            </button>
+          </div>
         </div>
       </header>
 
-      <ClusterPicker
-        context={context}
-        namespace={namespace}
-        disabled={streaming}
-        onContextChange={setContext}
-        onNamespaceChange={setNamespace}
-        onInvestigate={() => start(context, namespace || undefined)}
-      />
+      <main className="mx-auto max-w-4xl px-6 py-8">
+        <ClusterPicker
+          context={context}
+          namespace={namespace}
+          disabled={streaming}
+          onContextChange={setContext}
+          onNamespaceChange={setNamespace}
+          onInvestigate={() => start(context, namespace || undefined)}
+        />
 
-      {phase === "error" && (
-        <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      )}
+        {phase === "error" && (
+          <p className="mt-4 animate-fade-in-up rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+            {error}
+          </p>
+        )}
 
-      {(streaming || phase === "done") && (
-        <div className="mt-6 space-y-6">
-          <InvestigationChecklist completedSteps={completedSteps} done={phase === "done"} />
-          {phase === "done" && evidence && <RootCauseCard evidence={evidence} />}
+        {(streaming || phase === "done") && (
+          <div className="mt-6 space-y-6">
+            <InvestigationChecklist completedSteps={completedSteps} done={phase === "done"} />
+            {phase === "done" && evidence && <RootCauseCard evidence={evidence} />}
+          </div>
+        )}
+
+        <div className="mt-10">
+          <HistoryList records={records} loading={historyLoading} error={historyError} />
         </div>
-      )}
-
-      <div className="mt-10">
-        <HistoryList records={records} loading={historyLoading} error={historyError} />
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
